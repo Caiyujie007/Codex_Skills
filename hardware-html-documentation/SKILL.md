@@ -107,7 +107,9 @@ Animation discipline:
 
 Visual validation:
 
-- Render the HTML and inspect the relevant figure at normal reading size; source coordinates alone are not sufficient.
+- Render the HTML only with Google Chrome and inspect the relevant figure at normal reading size; source coordinates alone are not sufficient.
+- Before rendering, check that Chrome is installed and callable. On macOS, prefer `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`; otherwise use a discovered `google-chrome`, `google-chrome-stable`, or `chrome` binary.
+- If Google Chrome is not installed or cannot be launched, stop the HTML rendering/visual check. Do not substitute Safari, Quick Look, screenshots of another browser, or in-app browser automation for this skill's required render check. Tell the user that Chrome is required and ask them to install Google Chrome before continuing visual validation.
 - After editing SVG or canvas content, inspect the changed region closely.
 - Trace visible segments and endpoints, especially bends, dashed control lines, ready/backpressure paths, and external interface stubs.
 - Check that arrows are small enough not to dominate the drawing.
@@ -140,6 +142,7 @@ Before finishing:
 
 - Inspect the relevant RTL or existing docs before describing implementation details.
 - Check HTML structure and embedded script syntax.
+- Perform the Chrome-only HTML render/visual check described above whenever diagrams, SVG, canvas, CSS layout, or animation changed.
 - Run a lightweight runtime check when the HTML contains animation or non-trivial script.
 - Search for stale references to deleted or renamed docs.
 - Do not run synthesis or simulation unless the user asks, or the documentation depends on fresh results.
