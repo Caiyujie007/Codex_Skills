@@ -110,6 +110,7 @@ Visual validation:
 - Render the HTML only with Google Chrome and inspect the relevant figure at normal reading size; source coordinates alone are not sufficient.
 - Before rendering, check that Chrome is installed and callable. On macOS, prefer `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`; otherwise use a discovered `google-chrome`, `google-chrome-stable`, or `chrome` binary.
 - If Google Chrome is not installed or cannot be launched, stop the HTML rendering/visual check. Do not substitute Safari, Quick Look, screenshots of another browser, or in-app browser automation for this skill's required render check. Tell the user that Chrome is required and ask them to install Google Chrome before continuing visual validation.
+- Treat Chrome screenshots made only for visual QA as temporary intermediate files. Save them under a temporary path or a clearly named local render artifact, inspect them, then delete them before the final response unless the user explicitly asks to keep the screenshot.
 - After editing SVG or canvas content, inspect the changed region closely.
 - Trace visible segments and endpoints, especially bends, dashed control lines, ready/backpressure paths, and external interface stubs.
 - Check that arrows are small enough not to dominate the drawing.
@@ -134,6 +135,8 @@ When waveform review matters, state the important signals or groups to inspect.
 - Use relative paths inside project documentation; avoid machine-specific absolute paths.
 - If replacing `README.md` with `README.html`, update references that pointed to the Markdown file.
 - Delete stale standalone docs or animation files only when the user asks or when they have been fully superseded.
+- Do not leave transient render-check files such as `README.render.png`, `render.png`, browser screenshots, temporary PDFs, or scratch HTML copies in the project unless they are intentional evidence artifacts requested by the user.
+- If a screenshot or PDF is part of the final evidence, name it intentionally and link to it from the document or final response; otherwise remove it after inspection.
 - Keep generated docs self-contained enough to copy with the project to another machine.
 
 ## Final Validation
@@ -145,4 +148,5 @@ Before finishing:
 - Perform the Chrome-only HTML render/visual check described above whenever diagrams, SVG, canvas, CSS layout, or animation changed.
 - Run a lightweight runtime check when the HTML contains animation or non-trivial script.
 - Search for stale references to deleted or renamed docs.
+- Clean up temporary render-check artifacts created during validation, while preserving intentional final artifacts such as the HTML itself, referenced images, logs, waveforms, or reports.
 - Do not run synthesis or simulation unless the user asks, or the documentation depends on fresh results.
