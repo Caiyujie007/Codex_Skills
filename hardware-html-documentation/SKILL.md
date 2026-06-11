@@ -34,6 +34,25 @@ Organize the document in this order:
 5. **Verification**: list tests, what each proves, expected waveform observations, artifacts, and pass criteria.
 6. **Tool or synthesis notes**: include only when relevant, after the conceptual and RTL sections.
 
+## Design-As-Built Focus
+
+This skill documents the hardware as it exists now, not the change process that produced it.
+
+When regenerating documentation after RTL, spec, or requirement changes:
+
+- Treat the latest RTL, testbench, run scripts, and current verification artifacts as the source of truth.
+- Explain the current hardware principles, behavior, interfaces, datapath/control flow, RTL mapping, and verification evidence.
+- Do not describe removed mechanisms, obsolete parameters, old requirements, migration history, or how the design changed unless the user explicitly asks for a changelog or migration note.
+- If an existing README contains stale change-history language, rewrite it into neutral current-design language.
+- Avoid wording such as "old version", "removed", "no longer", "changed from", "previously", or "legacy" in the main hardware document.
+- If stale simulation or waveform directories exist, ignore them unless they are part of the active verification flow or the user asks to document history.
+
+Good:
+  `The output scheduler issues a request when downstream capacity is available.`
+
+Avoid:
+  `The old scheduler was removed and replaced by downstream-capacity control.`
+
 ## Explanation Style
 
 - Teach with simple language, terms tables, compact pseudocode, and visuals when they help.
@@ -127,6 +146,7 @@ For each case, include:
 - Expected waveform observations, not only PASS/FAIL.
 - Output artifacts such as logs, WDB/WCFG/VCD, reports, or checker logs.
 - Known limitations or intentional failing/deadlock-learning cases, if any.
+- Include only active verification cases and artifacts that prove the current hardware behavior. Ignore stale artifacts from older design iterations unless the user explicitly requests history or migration documentation.
 
 When waveform review matters, state the important signals or groups to inspect.
 
@@ -148,5 +168,6 @@ Before finishing:
 - Perform the Chrome-only HTML render/visual check described above whenever diagrams, SVG, canvas, CSS layout, or animation changed.
 - Run a lightweight runtime check when the HTML contains animation or non-trivial script.
 - Search for stale references to deleted or renamed docs.
+- Search for change-history wording, removed-feature names, and stale artifact references learned during the task. The final README should read like a hardware or microarchitecture reference, not a modification report.
 - Clean up temporary render-check artifacts created during validation, while preserving intentional final artifacts such as the HTML itself, referenced images, logs, waveforms, or reports.
 - Do not run synthesis or simulation unless the user asks, or the documentation depends on fresh results.
