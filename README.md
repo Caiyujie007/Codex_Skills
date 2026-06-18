@@ -20,9 +20,12 @@
 | [`vivado-workflow`](./vivado-workflow/SKILL.md) | Vivado project-mode 综合、xsim 仿真、WDB/WCFG 波形交付 | 不只是会敲 `xvlog/xelab/xsim`，而是要保留一个可打开的 Vivado project，生成 DRC、timing、utilization、methodology 报告，并把 WDB/WCFG 做成可以回看的验证证据。 |
 | [`rtl-open-tools-flow`](./rtl-open-tools-flow/SKILL.md) | Verilator/Yosys/Icarus/GTKWave 的开源 RTL 检查与仿真流程 | 用轻量工具搭一条可复现的本地验证链：Verilator 抓语法和高风险 warning，Yosys 查结构问题，Icarus 跑独立 case，GTKWave/VCD/GTKW/open_wave.command 留给后续复查。 |
 | [`hardware-html-documentation`](./hardware-html-documentation/SKILL.md) | 面向硬件设计的自包含 HTML 文档 | 文档先讲 mental model，再讲接口、拓扑、握手、RTL 映射，最后讲验证 case 和波形证据。图和动画要像工程图，不是装饰图；每根线、每个箭头、每个验证 artifact 都要能解释清楚。 |
+| [`drawio`](./drawio/SKILL.md) | draw.io / diagrams.net 工程图绘制、编辑和导出 | 用离线 YAML-first 工作流创建、修改、复刻和导出 draw.io 图；优先生成 `.drawio`/SVG，可选使用 macOS 上的 draw.io Desktop 做 PNG/PDF/JPG 等增强导出。 |
 | [`flexnoc-flit-monitor`](./flexnoc-flit-monitor/SKILL.md) | FlexNoC Req 网络 flit monitor 调试包生成 | 根据 FlexNoC 顶层 RTL、Req.md 和 AxUser/master 对应关系，生成 `.v/.vh/.rc` 以及 release tar 包，用于在 Verdi 里观察 Req flit 的 state、seqid、master 归属和 switch input 的预测 target。 |
 | [`paper-zh-annotated-translation`](./paper-zh-annotated-translation/SKILL.md) | 英文技术论文 PDF 到中文注释版 HTML | 把论文翻译成像原论文一样可读的中文 HTML，而不是总结。保留版式节奏、图表位置、章节结构和英文来源 provenance，并在关键技术点后面补“原理说明”。 |
 | [`video-course-to-html-notes`](./video-course-to-html-notes/SKILL.md) | 视频课程 / 录屏课件转 HTML 学习笔记 | 从视频里抽真正不同的课件页，不把鼠标移动、红笔标注、短暂遮挡当成新页。每页截图后面都要用“这是什么意思？”的口气解释，让人不用重看视频也能复习。 |
+
+`drawio` 这个 skill 来自 [jgraph/drawio-desktop](https://github.com/jgraph/drawio-desktop) 相关工作流，并针对 macOS 环境做了必要的修改与限制。
 
 ## 我怎么理解 Skill
 
@@ -74,6 +77,10 @@ project/
 
 ```text
 使用 hardware-html-documentation，把这个 NoC 模块整理成自包含 README.html，先讲原理，再讲接口和 RTL 映射，最后列验证 case。
+```
+
+```text
+使用 drawio，帮我画一个 NoC 拓扑图，输出可编辑的 .drawio 和可预览的 SVG，优先走离线 YAML-first 流程。
 ```
 
 ```text
@@ -146,6 +153,11 @@ hardware-html-documentation
 ├── hardware-html-documentation/
 │   ├── SKILL.md
 │   └── scripts/
+├── drawio/
+│   ├── SKILL.md
+│   ├── references/
+│   ├── scripts/
+│   └── styles/
 ├── flexnoc-flit-monitor/
 │   ├── SKILL.md
 │   └── scripts/
