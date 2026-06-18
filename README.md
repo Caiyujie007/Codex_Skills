@@ -20,6 +20,7 @@
 | [`vivado-workflow`](./vivado-workflow/SKILL.md) | Vivado project-mode 综合、xsim 仿真、WDB/WCFG 波形交付 | 不只是会敲 `xvlog/xelab/xsim`，而是要保留一个可打开的 Vivado project，生成 DRC、timing、utilization、methodology 报告，并把 WDB/WCFG 做成可以回看的验证证据。 |
 | [`rtl-open-tools-flow`](./rtl-open-tools-flow/SKILL.md) | Verilator/Yosys/Icarus/GTKWave 的开源 RTL 检查与仿真流程 | 用轻量工具搭一条可复现的本地验证链：Verilator 抓语法和高风险 warning，Yosys 查结构问题，Icarus 跑独立 case，GTKWave/VCD/GTKW/open_wave.command 留给后续复查。 |
 | [`hardware-html-documentation`](./hardware-html-documentation/SKILL.md) | 面向硬件设计的自包含 HTML 文档 | 文档先讲 mental model，再讲接口、拓扑、握手、RTL 映射，最后讲验证 case 和波形证据。图和动画要像工程图，不是装饰图；每根线、每个箭头、每个验证 artifact 都要能解释清楚。 |
+| [`flexnoc-flit-monitor`](./flexnoc-flit-monitor/SKILL.md) | FlexNoC Req 网络 flit monitor 调试包生成 | 根据 FlexNoC 顶层 RTL、Req.md 和 AxUser/master 对应关系，生成 `.v/.vh/.rc` 以及 release tar 包，用于在 Verdi 里观察 Req flit 的 state、seqid、master 归属和 switch input 的预测 target。 |
 | [`paper-zh-annotated-translation`](./paper-zh-annotated-translation/SKILL.md) | 英文技术论文 PDF 到中文注释版 HTML | 把论文翻译成像原论文一样可读的中文 HTML，而不是总结。保留版式节奏、图表位置、章节结构和英文来源 provenance，并在关键技术点后面补“原理说明”。 |
 | [`video-course-to-html-notes`](./video-course-to-html-notes/SKILL.md) | 视频课程 / 录屏课件转 HTML 学习笔记 | 从视频里抽真正不同的课件页，不把鼠标移动、红笔标注、短暂遮挡当成新页。每页截图后面都要用“这是什么意思？”的口气解释，让人不用重看视频也能复习。 |
 
@@ -73,6 +74,10 @@ project/
 
 ```text
 使用 hardware-html-documentation，把这个 NoC 模块整理成自包含 README.html，先讲原理，再讲接口和 RTL 映射，最后列验证 case。
+```
+
+```text
+帮我使用 [flexnoc-flit-monitor](.agents/skills/flexnoc-flit-monitor/) 这个skill生成.v/.vh/.rc及最终的tar包。输入条件为：代码位置在 [asr](asr/) ，模块顶层入口是 [noc_left_sep.v](asr/noc_left_sep.v) 下的module noc_left_sep，instance路径为/tb/chip_inst[0]/die_inst[0]/u_tb_die/u_dut/u_ddr_noc_w。Req.md使用的是/Users/caiyujie/Documents/Codex/noc_req_extract_20260616_103625/Req.md。AxUser的[6:5]可以区分4个master。
 ```
 
 ```text
@@ -139,6 +144,9 @@ hardware-html-documentation
 ├── rtl-open-tools-flow/
 │   └── SKILL.md
 ├── hardware-html-documentation/
+│   ├── SKILL.md
+│   └── scripts/
+├── flexnoc-flit-monitor/
 │   ├── SKILL.md
 │   └── scripts/
 ├── paper-zh-annotated-translation/
