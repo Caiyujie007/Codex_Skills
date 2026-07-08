@@ -389,12 +389,12 @@ def extract_header_layout(text: str, axuser_bits: Tuple[int, int]) -> HeaderLayo
     aperture_hi, aperture_lo = route_ranges["CmdRx_ApertureId"]
 
     aperture_width = aperture_hi - aperture_lo + 1
-    # FlexNoC Req aperture usually packs {Aper_PathId, Aper_SubMappingId}.
-    # Derive path by excluding the 2-bit submapping tail after verifying width.
-    if aperture_width < 3:
+    # The monitor decodes the same route field carried by the Req flit header.
+    # In the generated RTL this field is CmdRx_ApertureId as it appears inside
+    # RouteId; do not drop low bits based on older PathId/SubMapping helpers.
+    if aperture_width < 1:
         raise Fatal(f"{name}: CmdRx_ApertureId width {aperture_width} is too small")
-    submapping_width = 2
-    path_lo = aperture_lo + submapping_width
+    path_lo = aperture_lo
     path_hi = aperture_hi
 
     user_width = widths.get("Hdr_User", user_msb - user_lsb + 1)
