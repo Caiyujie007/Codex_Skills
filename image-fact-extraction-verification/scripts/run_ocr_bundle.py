@@ -1,96 +1,136 @@
 #!/usr/bin/env python3
 
 import argparse
+import hashlib
 import json
+import re
 import shutil
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 
 def run(command, *, stdout_path=None):
-    if stdout_path is None:
-        return subprocess.run(command, check=True, text=True, capture_output=True)
-    with stdout_path.open("w", encoding="utf-8") as handle:
-        return subprocess.run(command, check=True, text=True, stdout=handle, stderr=subprocess.PIPE)
+    try:
+        result = subprocess.run(command, check=True, capture_output=True, text=True)
+        if stdout_path is not None:
+            stdout_path.write_text(result.stdout, encoding="utf-8")
+        return {"ok": True, "command": command, "stderr": result.stderr.strip()}
+    except (OSError, subprocess.CalledProcessError) as exc:
+        stderr = getattr(exc, "stderr", "") or str(exc)
+        return {"ok": False, "command": command, "error": stderr.strip()}
+
+
+def sha256(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def image_dimensions(path):
+    result = subprocess.run(
+        ["sips", "-g", "pixelWidth", "-g", "pixelHeight", str(path)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    width = re.search(r"pixelWidth:\s*(\d+)", result.stdout)
+    height = re.search(r"pixelHeight:\s*(\d+)", result.stdout)
+    return {
+        "width": int(width.group(1)) if width else None,
+        "height": int(height.group(1)) if height else None,
+    }
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Run independent Apple Vision and Tesseract OCR passes for verification."
+        description="Run complementary local OCR engines and retain evidence outputs."
     )
-    parser.add_argument("image", type=Path)
+    parser.add_argument("source", type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--languages", default="chi_sim+eng")
+    parser.add_argument("--psm", nargs="+", type=int, default=[6, 11])
     args = parser.parse_args()
 
-    image = args.image.expanduser().resolve()
-    output_dir = args.output_dir.expanduser().resolve()
-    if not image.is_file():
-        parser.error(f"image does not exist: {image}")
+    source = args.source.expanduser().resolve()
+    if not source.is_file():
+        parser.error(f"source image does not exist: {source}")
 
+    output_dir = args.output_dir.expanduser().resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
-    script_dir = Path(__file__).resolve().parent
+
     manifest = {
-        "source": str(image),
-        "engines": {},
-        "notes": [
-            "OCR output is candidate evidence and must be checked against source pixels.",
-            "Do not infer unresolved fields from patterns."
-        ],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "source": str(source),
+        "sha256": sha256(source),
+        "dimensions": image_dimensions(source),
+        "runs": [],
     }
 
-    try:
-        vision_path = output_dir / "vision.json"
-        result = run(
-            ["xcrun", "swift", str(script_dir / "apple_vision_ocr.swift"), str(image)]
+    swift = shutil.which("swift")
+    vision_script = Path(__file__).with_name("apple_vision_ocr.swift")
+    if swift:
+        manifest["runs"].append(
+            {
+                "engine": "apple_vision",
+                **run([swift, str(vision_script), str(source)], stdout_path=output_dir / "vision.json"),
+            }
         )
-        vision_path.write_text(result.stdout, encoding="utf-8")
-        manifest["engines"]["apple_vision"] = {"ok": True, "output": str(vision_path)}
-    except (OSError, subprocess.CalledProcessError) as exc:
-        manifest["engines"]["apple_vision"] = {"ok": False, "error": str(exc)}
+    else:
+        manifest["runs"].append(
+            {"engine": "apple_vision", "ok": False, "error": "swift not found"}
+        )
 
     tesseract = shutil.which("tesseract")
     if tesseract:
-        for psm in (6, 11):
-            prefix = output_dir / f"tesseract_psm{psm}"
-            try:
-                text_result = run(
-                    [tesseract, str(image), "stdout", "-l", args.languages, "--psm", str(psm)]
-                )
-                prefix.with_suffix(".txt").write_text(text_result.stdout, encoding="utf-8")
-                tsv_result = run(
-                    [tesseract, str(image), "stdout", "-l", args.languages, "--psm", str(psm), "tsv"]
-                )
-                prefix.with_suffix(".tsv").write_text(tsv_result.stdout, encoding="utf-8")
-                manifest["engines"][f"tesseract_psm{psm}"] = {
-                    "ok": True,
-                    "text": str(prefix.with_suffix(".txt")),
-                    "tsv": str(prefix.with_suffix(".tsv")),
+        version = subprocess.run(
+            [tesseract, "--version"], check=False, capture_output=True, text=True
+        ).stdout.splitlines()
+        manifest["tesseract_version"] = version[0] if version else "unknown"
+        for psm in args.psm:
+            text_path = output_dir / f"tesseract_psm{psm}.txt"
+            tsv_base = output_dir / f"tesseract_psm{psm}"
+            text_run = run(
+                [tesseract, str(source), "stdout", "-l", args.languages, "--psm", str(psm)],
+                stdout_path=text_path,
+            )
+            tsv_run = run(
+                [
+                    tesseract,
+                    str(source),
+                    str(tsv_base),
+                    "-l",
+                    args.languages,
+                    "--psm",
+                    str(psm),
+                    "tsv",
+                ]
+            )
+            manifest["runs"].append(
+                {
+                    "engine": "tesseract",
+                    "psm": psm,
+                    "text": text_run,
+                    "tsv": tsv_run,
+                    "ok": text_run["ok"] or tsv_run["ok"],
                 }
-            except (OSError, subprocess.CalledProcessError) as exc:
-                manifest["engines"][f"tesseract_psm{psm}"] = {
-                    "ok": False,
-                    "error": str(exc),
-                }
+            )
     else:
-        manifest["engines"]["tesseract"] = {
-            "ok": False,
-            "error": "tesseract executable not found",
-        }
+        manifest["runs"].append(
+            {"engine": "tesseract", "ok": False, "error": "tesseract not found"}
+        )
 
     manifest_path = output_dir / "manifest.json"
-    manifest_path.write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    successful = sum(1 for value in manifest["engines"].values() if value.get("ok"))
-    if successful == 0:
+    if not any(run_info.get("ok") for run_info in manifest["runs"]):
         print(f"No OCR engine succeeded. See {manifest_path}", file=sys.stderr)
         return 1
 
-    print(manifest_path)
+    print(output_dir)
     return 0
 
 

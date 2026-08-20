@@ -30,17 +30,19 @@ Treat image reading as evidence extraction, not visual guessing. Preserve the di
 Run the bundled helper:
 
 ```bash
-python3 ~/.codex/skills/image-fact-extraction-verification/scripts/run_ocr_bundle.py \
+python3 "<skill-directory>/scripts/run_ocr_bundle.py" \
   "/absolute/path/to/source-image" \
   --output-dir "/tmp/image-fact-ocr"
 ```
+
+Replace `<skill-directory>` with the directory containing this `SKILL.md`.
 
 It produces:
 
 - `vision.json`: Apple Vision text, confidence, and normalized bounding boxes.
 - `tesseract_psm6.tsv` and `.txt`: block-oriented OCR.
 - `tesseract_psm11.tsv` and `.txt`: sparse-text OCR.
-- `manifest.json`: engine status and source metadata.
+- `manifest.json`: source hash and dimensions, engine status, commands, and errors.
 
 Do not treat engine agreement alone as proof. Compare both results against the actual pixels.
 
@@ -95,4 +97,6 @@ For XLSX output, use the spreadsheet skill or a structured spreadsheet library. 
 
 If the image is too blurred, cropped, or compressed to support a reliable answer, say exactly which rows or fields are unreadable and request a higher-resolution crop. Do not complete them by inference.
 
-See [verification-checklist.md](references/verification-checklist.md) for a compact delivery checklist.
+Use [verification-checklist.md](references/verification-checklist.md) before delivery. Read
+[verification-playbook.md](references/verification-playbook.md) when reconstructing complex
+layouts or adjudicating ambiguous fields.

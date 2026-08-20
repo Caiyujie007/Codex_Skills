@@ -4,59 +4,72 @@ import AppKit
 import Foundation
 import Vision
 
-struct OCRItem: Codable {
-    let text: String
-    let confidence: Float
-    let x: Double
-    let y: Double
-    let width: Double
-    let height: Double
+func fail(_ message: String, code: Int32 = 1) -> Never {
+    FileHandle.standardError.write((message + "\n").data(using: .utf8)!)
+    exit(code)
 }
 
 guard CommandLine.arguments.count == 2 else {
-    fputs("usage: apple_vision_ocr.swift IMAGE\n", stderr)
-    exit(2)
+    fail("usage: apple_vision_ocr.swift IMAGE")
 }
 
-let imageURL = URL(fileURLWithPath: CommandLine.arguments[1])
-guard let image = NSImage(contentsOf: imageURL) else {
-    fputs("cannot open image\n", stderr)
-    exit(3)
+let imagePath = CommandLine.arguments[1]
+guard let image = NSImage(contentsOfFile: imagePath) else {
+    fail("cannot load image: \(imagePath)")
 }
 
-var proposed = CGRect(origin: .zero, size: image.size)
-guard let cgImage = image.cgImage(forProposedRect: &proposed, context: nil, hints: nil) else {
-    fputs("cannot create CGImage\n", stderr)
-    exit(4)
+var proposedRect = NSRect(origin: .zero, size: image.size)
+guard let cgImage = image.cgImage(forProposedRect: &proposedRect, context: nil, hints: nil) else {
+    fail("cannot convert image to CGImage: \(imagePath)")
 }
 
 let request = VNRecognizeTextRequest()
 request.recognitionLevel = .accurate
 request.recognitionLanguages = ["zh-Hans", "en-US"]
 request.usesLanguageCorrection = true
-request.minimumTextHeight = 0.004
+request.minimumTextHeight = 0.003
 
-let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-try handler.perform([request])
-
-let items: [OCRItem] = (request.results ?? []).compactMap { observation in
-    guard let candidate = observation.topCandidates(1).first else { return nil }
-    let box = observation.boundingBox
-    return OCRItem(
-        text: candidate.string,
-        confidence: candidate.confidence,
-        x: box.origin.x,
-        y: box.origin.y,
-        width: box.size.width,
-        height: box.size.height
-    )
-}.sorted {
-    if abs($0.y - $1.y) > 0.01 { return $0.y > $1.y }
-    return $0.x < $1.x
+do {
+    try VNImageRequestHandler(cgImage: cgImage, options: [:]).perform([request])
+} catch {
+    fail("Vision OCR failed: \(error)")
 }
 
-let encoder = JSONEncoder()
-encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-let data = try encoder.encode(items)
-FileHandle.standardOutput.write(data)
-FileHandle.standardOutput.write(Data("\n".utf8))
+let observations = (request.results ?? []).compactMap { $0 as? VNRecognizedTextObservation }
+let rows: [[String: Any]] = observations.compactMap { observation in
+    guard let candidate = observation.topCandidates(1).first else { return nil }
+    let box = observation.boundingBox
+    return [
+        "text": candidate.string,
+        "confidence": Double(candidate.confidence),
+        "bbox": [
+            "x": Double(box.origin.x),
+            "y": Double(box.origin.y),
+            "width": Double(box.width),
+            "height": Double(box.height),
+            "top": Double(1.0 - box.origin.y - box.height)
+        ]
+    ]
+}.sorted { lhs, rhs in
+    let leftBox = lhs["bbox"] as! [String: Double]
+    let rightBox = rhs["bbox"] as! [String: Double]
+    let verticalDelta = abs(leftBox["top"]! - rightBox["top"]!)
+    if verticalDelta > 0.01 { return leftBox["top"]! < rightBox["top"]! }
+    return leftBox["x"]! < rightBox["x"]!
+}
+
+let payload: [String: Any] = [
+    "engine": "Apple Vision",
+    "image": imagePath,
+    "width": cgImage.width,
+    "height": cgImage.height,
+    "observations": rows
+]
+
+do {
+    let data = try JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys])
+    FileHandle.standardOutput.write(data)
+    FileHandle.standardOutput.write("\n".data(using: .utf8)!)
+} catch {
+    fail("cannot serialize OCR result: \(error)")
+}
